@@ -18,19 +18,33 @@ object GenericFunctionExercises {
     // 1a. Implement `swap` which exchanges `first` and `second`
     // such as Pair("John", "Doe").swap == Pair("Doe", "John")
     def swap: Pair[A] =
-      ???
+      Pair(second, first)
 
     // 1b. Implement `map` which applies a function to `first` and `second`
     // such as Pair("John", "Doe").map(_.length) == Pair(4,3)
     def map[To](update: A => To): Pair[To] =
-      ???
+      Pair(update(first), update(second))
 
     // 1c. Implement `zipWith` which merges two Pairs using a `combine` function
     // such as Pair(0, 2).zipWith(Pair(3, 4))((x, y) => x + y) == Pair(3, 6)
     //         Pair(2, 3).zipWith(Pair("Hello ", "World "))(replicate) == Pair("Hello Hello ", "World World World ")
     // Bonus: Why did we separate the arguments of `zipWith` into two set of parentheses?
     def zipWith[Other, To](other: Pair[Other])(combine: (A, Other) => To): Pair[To] =
-      ???
+      Pair(combine(this.first, other.first), combine(this.second, other.second))
+
+    //////////////////////////////////////////////
+    // Bonus question (not covered by the video)
+    //////////////////////////////////////////////
+
+    // 1f. Can you implement a method on `Pair` similar to `zipWith`, but that combines 3
+    // Pairs instead of 2? If yes, can you implement this method using `zipWith`?
+    // Note: Libraries often call this method `map3` and `zipWith` is often called `map2`
+    def map3[Other, Another, To](a: Pair[Other], b: Pair[Another])(combine: (A, Other, Another) => To): Pair[To] = {
+      Pair(combine(this.first, a.first, b.first), combine(this.second, a.second, b.second))
+    }
+    def map3_[B, C, D](b: Pair[B], c: Pair[C])(combine: (A, B, C) => D): Pair[D] = {
+      this.zipWith(b)((x: A, y: B) => (z: C) => combine(x, y, z)).zipWith(c)((f, arg) => f(arg))
+    }
   }
 
   // 1d. Use the Pair API to decode the content of `secret`.
@@ -42,7 +56,7 @@ object GenericFunctionExercises {
       first = List(103, 110, 105, 109, 109, 97, 114, 103, 111, 114, 80),
       second = List(108, 97, 110, 111, 105, 116, 99, 110, 117, 70)
     )
-  lazy val decoded: Pair[String] = ???
+  val decoded: Pair[String] = secret.map(bytes => new String(bytes.toArray).reverse).swap
 
   // 1e. Use the Pair API to combine `productNames` and `productPrices` into `products`
   // such as products == Pair(Product("Coffee", 2.5), Product("Plane ticket", 329.99))
@@ -51,17 +65,9 @@ object GenericFunctionExercises {
   val productNames: Pair[String]  = Pair("Coffee", "Plane ticket")
   val productPrices: Pair[Double] = Pair(2.5, 329.99)
 
-  lazy val products: Pair[Product] =
-    ???
-
-  //////////////////////////////////////////////
-  // Bonus question (not covered by the video)
-  //////////////////////////////////////////////
-
-  // 1f. Can you implement a method on `Pair` similar to `zipWith`, but that combines 3
-  // Pairs instead of 2? If yes, can you implement this method using `zipWith`?
-  // Note: Libraries often call this method `map3` and `zipWith` is often called `map2`
-
+  val products: Pair[Product] =
+    productNames.zipWith(productPrices)(Product)
+  
   ////////////////////////////
   // Exercise 2: Predicate
   ////////////////////////////
@@ -72,7 +78,7 @@ object GenericFunctionExercises {
   val isEven: Predicate[Int] =
     Predicate((number: Int) => number % 2 == 0)
 
-  lazy val isOddPositive: Predicate[Int] =
+  val isOddPositive: Predicate[Int] =
     isEven.flip && isPositive
 
   case class Predicate[A](eval: A => Boolean) {
@@ -86,7 +92,7 @@ object GenericFunctionExercises {
     //         (isEven && isPositive)(-4) == false
     //         (isEven && isPositive)(-7) == false
     def &&(other: Predicate[A]): Predicate[A] =
-      ???
+      Predicate((a: A) => this.apply(a) && other.apply(a))
 
     // 2b. Implement `||` that combines two predicates using logical or
     // such as (isEven || isPositive)(12) == true
@@ -94,12 +100,17 @@ object GenericFunctionExercises {
     //         (isEven || isPositive)(-4) == true
     // but     (isEven || isPositive)(-7) == false
     def ||(other: Predicate[A]): Predicate[A] =
-      ???
+      Predicate((a: A) => this.apply(a) || other.apply(a))
 
     // 2c. Implement `flip` that reverses a predicate
     // such as isEven.flip(11) == true
     def flip: Predicate[A] =
-      ???
+      Predicate((a: A) => !this.apply(a))
+  }
+
+  object Predicate {
+    def False[A]: Predicate[A] = Predicate(_ => false)
+    def True[A]: Predicate[A] = Predicate(_ => true)
   }
 
   // 2d. Implement `isValidUser`, a predicate which checks if a `User` is:
@@ -114,8 +125,16 @@ object GenericFunctionExercises {
   // You may want to create new Predicate methods to improve the implementation of `isValidUser`.
   case class User(name: String, age: Int)
 
-  lazy val isValidUser: Predicate[User] =
-    ???
+  def isGreaterThan(x: Int): Predicate[Int] = Predicate((n: Int) => n >= x)
+
+  val isValidUser: Predicate[User] = {
+    val is18Plus: Predicate[Int] = Predicate(_ >= 18)
+    val isValidName: Predicate[String] = Predicate(n => n.length >= 3)
+    val isCapitalized: Predicate[String] = Predicate(n => n.head.isUpper)
+
+    Predicate((u: User) => is18Plus(u.age) && isValidName(u.name) && isCapitalized(u.name))
+  }
+
 
   ////////////////////////////
   // Exercise 3: JsonDecoder
