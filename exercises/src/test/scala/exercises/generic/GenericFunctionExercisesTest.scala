@@ -11,7 +11,7 @@ import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import scala.util.Try
 
 class GenericFunctionExercisesTest extends AnyFunSuite with ScalaCheckDrivenPropertyChecks {
-
+  import Predicate._
   ////////////////////
   // Exercise 1: Pair
   ////////////////////
@@ -47,9 +47,7 @@ class GenericFunctionExercisesTest extends AnyFunSuite with ScalaCheckDrivenProp
     assert(!(isEven && isPositive)(-7))
   }
 
-  test("PBT for Predicate") {
-    import Predicate._
-
+  test("Predicate && PBT") {
     forAll { (v: Int, f1: Int => Boolean, f2: Int => Boolean) =>
       val p1 = Predicate(f1)
       val p2 = Predicate(f2)
@@ -58,16 +56,6 @@ class GenericFunctionExercisesTest extends AnyFunSuite with ScalaCheckDrivenProp
       assert((p1 && False)(v) == (p2 && False)(v))
       assert((p1 && True)(v) == p1(v))
       assert((p1 && p2)(v) == (p2 && p1)(v))
-
-      assert((p1 || True)(v))
-      assert((p1 || p2 || True)(v))
-      assert((p1 || True)(v) == (p2 || True)(v))
-      assert((p1 || False)(v) == p1(v))
-      assert((p1 || p2 || False)(v) == (p1 || p2)(v))
-      assert((p1 || p2)(v) == (p2 || p1)(v))
-
-      assert(False.flip(v))
-      assert(!True.flip(v))
     }
   }
 
@@ -78,15 +66,36 @@ class GenericFunctionExercisesTest extends AnyFunSuite with ScalaCheckDrivenProp
     assert(!(isEven || isPositive)(-7))
   }
 
+  test("Predicate || PBT") {
+    forAll { (v: Int, f1: Int => Boolean, f2: Int => Boolean) =>
+      val p1 = Predicate(f1)
+      val p2 = Predicate(f2)
+
+      assert((p1 || True)(v))
+      assert((p1 || p2 || True)(v))
+      assert((p1 || True)(v) == (p2 || True)(v))
+      assert((p1 || False)(v) == p1(v))
+      assert((p1 || p2 || False)(v) == (p1 || p2)(v))
+      assert((p1 || p2)(v) == (p2 || p1)(v))
+    }
+  }
+
   test("Predicate flip") {
     assert(isEven.flip(11))
+  }
+
+  test("Predicate flip PBT") {
+    forAll { (v: Int, f1: Int => Boolean, f2: Int => Boolean) =>
+      assert(False.flip(v))
+      assert(!True.flip(v))
+    }
   }
 
   test("isValidUser") {
     assert(isValidUser(User("John", 20)))
     assert(!isValidUser(User("John", 17)))
     assert(!isValidUser(User("john", 20)))
-    assert(!isValidUser(User("x"   , 23)))
+    assert(!isValidUser(User("X", 23)))
   }
 
   ////////////////////////////

@@ -39,12 +39,10 @@ object GenericFunctionExercises {
     // 1f. Can you implement a method on `Pair` similar to `zipWith`, but that combines 3
     // Pairs instead of 2? If yes, can you implement this method using `zipWith`?
     // Note: Libraries often call this method `map3` and `zipWith` is often called `map2`
-    def map3[Other, Another, To](a: Pair[Other], b: Pair[Another])(combine: (A, Other, Another) => To): Pair[To] = {
+    def map3[Other, Another, To](a: Pair[Other], b: Pair[Another])(combine: (A, Other, Another) => To): Pair[To] =
       Pair(combine(this.first, a.first, b.first), combine(this.second, a.second, b.second))
-    }
-    def map3_[B, C, D](b: Pair[B], c: Pair[C])(combine: (A, B, C) => D): Pair[D] = {
+    def map3_[B, C, D](b: Pair[B], c: Pair[C])(combine: (A, B, C) => D): Pair[D] =
       this.zipWith(b)((x: A, y: B) => (z: C) => combine(x, y, z)).zipWith(c)((f, arg) => f(arg))
-    }
   }
 
   // 1d. Use the Pair API to decode the content of `secret`.
@@ -67,7 +65,7 @@ object GenericFunctionExercises {
 
   val products: Pair[Product] =
     productNames.zipWith(productPrices)(Product)
-  
+
   ////////////////////////////
   // Exercise 2: Predicate
   ////////////////////////////
@@ -92,7 +90,7 @@ object GenericFunctionExercises {
     //         (isEven && isPositive)(-4) == false
     //         (isEven && isPositive)(-7) == false
     def &&(other: Predicate[A]): Predicate[A] =
-      Predicate((a: A) => this.apply(a) && other.apply(a))
+      Predicate((a: A) => this(a) && other(a))
 
     // 2b. Implement `||` that combines two predicates using logical or
     // such as (isEven || isPositive)(12) == true
@@ -100,17 +98,19 @@ object GenericFunctionExercises {
     //         (isEven || isPositive)(-4) == true
     // but     (isEven || isPositive)(-7) == false
     def ||(other: Predicate[A]): Predicate[A] =
-      Predicate((a: A) => this.apply(a) || other.apply(a))
+      Predicate((a: A) => this(a) || other(a))
 
     // 2c. Implement `flip` that reverses a predicate
     // such as isEven.flip(11) == true
     def flip: Predicate[A] =
-      Predicate((a: A) => !this.apply(a))
+      Predicate((a: A) => !this(a))
+
+    def contramap[B](zoom: B => A): Predicate[B] = Predicate(x => this(zoom(x)))
   }
 
   object Predicate {
     def False[A]: Predicate[A] = Predicate(_ => false)
-    def True[A]: Predicate[A] = Predicate(_ => true)
+    def True[A]: Predicate[A]  = Predicate(_ => true)
   }
 
   // 2d. Implement `isValidUser`, a predicate which checks if a `User` is:
@@ -125,16 +125,14 @@ object GenericFunctionExercises {
   // You may want to create new Predicate methods to improve the implementation of `isValidUser`.
   case class User(name: String, age: Int)
 
-  def isGreaterThan(x: Int): Predicate[Int] = Predicate((n: Int) => n >= x)
+  def by[A, B](zoom: B => A)(p: Predicate[A]): Predicate[B] = p.contramap(zoom)
 
-  val isValidUser: Predicate[User] = {
-    val is18Plus: Predicate[Int] = Predicate(_ >= 18)
-    val isValidName: Predicate[String] = Predicate(n => n.length >= 3)
-    val isCapitalized: Predicate[String] = Predicate(n => n.head.isUpper)
+  def isGreaterThan(i: Int): Predicate[Int]   = Predicate(_ >= i)
+  def isLongerThan(i: Int): Predicate[String] = isGreaterThan(i).contramap(_.length)
+  val isCapitalised: Predicate[String]        = Predicate(_.head.isUpper)
 
-    Predicate((u: User) => is18Plus(u.age) && isValidName(u.name) && isCapitalized(u.name))
-  }
-
+  val isValidUser: Predicate[User] =
+    by[Int, User](_.age)(isGreaterThan(18)) && by[String, User](_.name)(isLongerThan(3) && isCapitalised)
 
   ////////////////////////////
   // Exercise 3: JsonDecoder
