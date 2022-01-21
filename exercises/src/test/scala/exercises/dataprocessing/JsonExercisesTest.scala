@@ -13,59 +13,125 @@ class JsonExercisesTest extends AnyFunSuite with ScalaCheckDrivenPropertyChecks 
         Map(
           "street-number" -> JsonNumber(25),
           "street-name"   -> JsonString("  Cody Road"),
+          "door-number"   -> JsonNull,
+          "business"      -> JsonBoolean(false)
         )
-      ),
+      )
     )
   )
 
+  val jane: Json = JsonObject(
+    Map(
+      "name" -> JsonString(" Jane Doe "),
+      "age"  -> JsonNumber(35),
+      "address" -> JsonObject(
+        Map(
+          "street-number" -> JsonNumber(21),
+          "street-name"   -> JsonString("  Toady Road"),
+          "door-number"   -> JsonNull,
+          "business"      -> JsonBoolean(true)
+        )
+      )
+    )
+  )
+
+  val does: Json = JsonArray(List(john, jane))
+
   test("trimAll") {
     assert(
-      trimAll(john) == JsonObject(
-        Map(
-          "name" -> JsonString("John Doe"),
-          "age"  -> JsonNumber(25),
-          "address" -> JsonObject(
+      trimAll(does) == JsonArray(
+        List(
+          JsonObject(
             Map(
-              "street-number" -> JsonNumber(25),
-              "street-name"   -> JsonString("Cody Road"),
+              "name" -> JsonString("John Doe"),
+              "age"  -> JsonNumber(25),
+              "address" -> JsonObject(
+                Map(
+                  "street-number" -> JsonNumber(25),
+                  "street-name"   -> JsonString("Cody Road"),
+                  "door-number"   -> JsonNull,
+                  "business"      -> JsonBoolean(false)
+                )
+              )
             )
           ),
+          JsonObject(
+            Map(
+              "name" -> JsonString("Jane Doe"),
+              "age"  -> JsonNumber(35),
+              "address" -> JsonObject(
+                Map(
+                  "street-number" -> JsonNumber(21),
+                  "street-name"   -> JsonString("Toady Road"),
+                  "door-number"   -> JsonNull,
+                  "business"      -> JsonBoolean(true)
+                )
+              )
+            )
+          )
         )
       )
     )
   }
 
-  ignore("anonymize") {
+  test("anonymize") {
     assert(
-      anonymize(john) == JsonObject(
-        Map(
-          "name" -> JsonString("***"),
-          "age"  -> JsonNumber(0),
-          "address" -> JsonObject(
+      anonymize(does) == JsonArray(
+        List(
+          JsonObject(
             Map(
-              "street-number" -> JsonNumber(0),
-              "street-name"   -> JsonString("***"),
+              "name" -> JsonString("***"),
+              "age"  -> JsonNumber(0),
+              "address" -> JsonObject(
+                Map(
+                  "street-number" -> JsonNumber(0),
+                  "street-name"   -> JsonString("***"),
+                  "door-number"   -> JsonNull,
+                  "business"      -> JsonBoolean(false)
+                )
+              )
             )
           ),
+          JsonObject(
+            Map(
+              "name" -> JsonString("***"),
+              "age"  -> JsonNumber(0),
+              "address" -> JsonObject(
+                Map(
+                  "street-number" -> JsonNumber(0),
+                  "street-name"   -> JsonString("***"),
+                  "door-number"   -> JsonNull,
+                  "business"      -> JsonBoolean(true)
+                )
+              )
+            )
+          )
         )
       )
     )
   }
 
-  ignore("search") {
-    assert(search(JsonObject(Map.empty), "ll") == false)
-    assert(search(JsonNumber(5), "ll") == false)
-    assert(search(JsonString("Hello"), "ll") == true)
-    assert(search(JsonObject(Map("message" -> JsonString("Hello"))), "ll") == true)
-    assert(search(JsonObject(Map("message" -> JsonString("Hello"))), "ss") == false)
-    assert(search(JsonObject(Map("message" -> JsonString("hi"))), "ll") == false)
+  test("search") {
+    assert(search(JsonObject(Map.empty), "ll", 10) == false)
+    assert(search(JsonNumber(5), "ll", 10) == false)
+    assert(search(JsonString("Hello"), "ll", 10) == true)
+    assert(search(JsonObject(Map("message" -> JsonString("Hello"))), "ll", 10) == true)
+    assert(search(JsonObject(Map("message" -> JsonString("Hello"))), "ss", 10) == false)
+    assert(search(JsonObject(Map("message" -> JsonString("hi"))), "ll", 10) == false)
+    assert(search(does, "ll", 10) == false)
+    assert(search(does, "John", 10) == true)
+    assert(search(does, "Ja", 10) == true)
+
+    assert(search(JsonObject(Map("user" -> JsonObject(Map("name" -> JsonString("John"))))), "o", 2) == true)
+    assert(search(JsonObject(Map("user" -> JsonObject(Map("name" -> JsonString("John"))))), "o", 1) == false)
   }
 
-  ignore("depth") {
+  test("depth") {
     assert(depth(JsonNumber(1)) == 0)
     assert(depth(JsonObject(Map.empty)) == 0)
     assert(depth(JsonObject(Map("k" -> JsonNumber(1)))) == 1)
     assert(depth(john) == 2)
+    assert(depth(does) == 3)
   }
 
 }

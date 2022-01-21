@@ -1,21 +1,29 @@
 package exercises.dataprocessing
 
+import scala.annotation.tailrec
+
 object JsonExercises {
 
   sealed trait Json
   case class JsonNumber(number: Double)         extends Json
   case class JsonString(text: String)           extends Json
   case class JsonObject(obj: Map[String, Json]) extends Json
+  case class JsonBoolean(bool: Boolean)         extends Json
+  case class JsonArray(arr: List[Json])         extends Json
+  case object JsonNull                          extends Json
 
   def trimAll(json: Json): Json =
     json match {
-      case _: JsonNumber   => json
-      case JsonString(str) => JsonString(str.trim)
+      case _: JsonNumber | _: JsonBoolean | JsonNull => json
+      case JsonString(str)                           => JsonString(str.trim)
       case JsonObject(obj) =>
-        val newObj = obj.map {
-          case (key, value) => (key, trimAll(value))
+        val newObj = obj.map { case (key, value) =>
+          (key, trimAll(value))
         }
         JsonObject(newObj)
+      case JsonArray(arr) =>
+        val newArr = arr.map(trimAll)
+        JsonArray(newArr)
     }
 
   // a. Implement `anonymize`, a method which keeps the structure of the JSON document
@@ -35,7 +43,13 @@ object JsonExercises {
   //  }                                           }
   //}                                           }
   def anonymize(json: Json): Json =
-    ???
+    json match {
+      case JsonNumber(_)             => JsonNumber(0)
+      case JsonString(_)             => JsonString("***")
+      case JsonObject(obj)           => JsonObject(obj.map { case (k, v) => (k, anonymize(v)) })
+      case JsonArray(arr)            => JsonArray(arr.map(anonymize))
+      case JsonBoolean(_) | JsonNull => json
+    }
 
   // b. Implement `search`, a method that checks if a JSON document contains a text.
   // Note: `search` doesn't look inside of the keys of a `JsonObject`, only the values.
@@ -45,8 +59,16 @@ object JsonExercises {
   // * search("Hello", "ll") == true
   // * search({ "message" : "hello" }, "ll") == true
   // * search({ "message" : "hi" }, "ll") == false
-  def search(json: Json, text: String): Boolean =
-    ???
+  def search(json: Json, substring: String, depth: Int): Boolean =
+    if (depth < 0) false
+    else
+      json match {
+        case JsonNumber(_) | JsonBoolean(_) | JsonNull => false
+        case JsonString(text)                          => text.contains(substring)
+        case JsonObject(obj) =>
+          obj.values.exists(search(_, substring, depth - 1))
+        case JsonArray(arr) => arr.exists(search(_, substring, depth - 1))
+      }
 
   // c. Implement `depth`, a method that calculates the maximum level of nesting of a JSON document.
   // For example:
@@ -54,7 +76,13 @@ object JsonExercises {
   // * { "name" : "john" } has depth 1
   // * { "name" : "john", "address" : { "postcode" : "E16 4SR" } } has depth 2
   def depth(json: Json): Int =
-    ???
+    json match {
+      case JsonNumber(_) | JsonString(_) | JsonBoolean(_) | JsonNull => 0
+      case JsonObject(obj) =>
+        obj.values.map(depth).maxOption.fold(0)(_ + 1)
+      case JsonArray(arr) =>
+        arr.map(depth).maxOption.fold(0)(_ + 1)
+    }
 
   //////////////////////////////////////////////
   // Bonus question (not covered by the video)

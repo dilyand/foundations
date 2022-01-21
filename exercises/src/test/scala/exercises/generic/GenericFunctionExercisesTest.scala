@@ -102,10 +102,56 @@ class GenericFunctionExercisesTest extends AnyFunSuite with ScalaCheckDrivenProp
   // Exercise 3: JsonDecoder
   ////////////////////////////
 
-  test("JsonDecoder UserId") {}
+  test("JsonDecoder UserId") {
+    forAll { (i: Int) =>
+      val json = i.toString
+      assert(userIdDecoder.decode(json) == UserId(i))
+    }
 
-  test("JsonDecoder LocalDate") {}
+    forAll { (s: String) =>
+      val json = s + 'a'
+      assertThrows[java.lang.NumberFormatException](userIdDecoder.decode(json))
+    }
+  }
 
-  test("JsonDecoder weirdLocalDateDecoder") {}
+  val genLocalDate: Gen[LocalDate] =
+    Gen.choose(LocalDate.MIN.toEpochDay, LocalDate.MAX.toEpochDay).map(LocalDate.ofEpochDay)
+  implicit val arbitraryLocalDate: Arbitrary[LocalDate] = Arbitrary(genLocalDate)
+
+  test("JsonDecoder LocalDate") {
+    assert(localDateDecoder.decode("\"2020-03-26\"") == LocalDate.of(2020, 3, 26))
+    assert(Try(localDateDecoder.decode("2020-03-26")).isFailure)
+    assert(Try(localDateDecoder.decode("hello")).isFailure)
+
+    forAll(genLocalDate) { (date: LocalDate) =>
+      val json = "\"" + DateTimeFormatter.ISO_LOCAL_DATE.format(date) + "\""
+      assert(localDateDecoder.decode(json) == date)
+    }
+  }
+
+  test("JsonDecoder weirdLocalDateDecoder") {
+    forAll(genLocalDate) { (date: LocalDate) =>
+      val json1 = "\"" + DateTimeFormatter.ISO_LOCAL_DATE.format(date) + "\""
+      val json2 = date.toEpochDay.toString
+      assert(weirdLocalDateDecoder.decode(json1) == date)
+      assert(weirdLocalDateDecoder.decode(json2) == date)
+    }
+  }
+
+  test("JsonDecoder Option") {
+    forAll { (i: Int) =>
+      val json = i.toString
+      assert(optionDecoder(intDecoder).decode(json).contains(i))
+    }
+
+    forAll(genLocalDate) { (date: LocalDate) =>
+      val json = "\"" + DateTimeFormatter.ISO_LOCAL_DATE.format(date) + "\""
+      assert(optionDecoder(localDateDecoder).decode(json).contains(date))
+    }
+
+    assert(optionDecoder(stringDecoder).decode("\"" + "null" + "\"").contains("null"))
+
+    assert(optionDecoder(stringDecoder).decode(null).isEmpty)
+  }
 
 }
