@@ -36,7 +36,8 @@ object TemperatureNotebook extends App {
   // Note: Check `ParList` companion object
   val parSamples: ParList[Sample] = {
     val partitionSize = math.ceil(samples.size.toDouble / 10).toInt
-    ParList.byPartitionSize(partitionSize, samples)
+    val ec            = fixedSizeExecutionContext(4)
+    ParList.byPartitionSize(partitionSize, samples, ec)
   }
 
 //  parSamples.partitions.zipWithIndex.foreach { case (partition, index) =>
@@ -64,11 +65,21 @@ object TemperatureNotebook extends App {
   // * List map + sum
   // * TODO ParList foldMap
   // * TODO ParList parFoldMap
-  bench("sum", iterations = 200, warmUpIterations = 40, ignore = true)(
+  bench("sum", iterations = 100, warmUpIterations = 40)(
     Labelled("List foldLeft", () => samples.foldLeft(0.0)((state, sample) => state + sample.temperatureFahrenheit)),
-    Labelled("List map + sum", () => samples.map(_.temperatureFahrenheit).sum)
-//    Labelled("ParList foldMap", () => ???),
-//    Labelled("ParList parFoldMap", () => ???),
+    Labelled("List map + sum", () => samples.map(_.temperatureFahrenheit).sum),
+    Labelled(
+      "ParList foldMap",
+      () =>
+        parSamples
+          .foldMap(_.temperatureFahrenheit)(Monoid.sumDouble)
+    ),
+    Labelled(
+      "ParList parFoldMap",
+      () =>
+        parSamples
+          .parFoldMap(_.temperatureFahrenheit)(Monoid.sumDouble)
+    )
   )
 
   // Compare the runtime performance of various implementations of `summary`

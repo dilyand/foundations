@@ -7,7 +7,7 @@ object TemperatureExercises {
   // Step 2: Find the minimum value among the local minimums.
   // Note: We'll write test in the file `ParListTest.scala`
   def minSampleByTemperature(samples: ParList[Sample]): Option[Sample] =
-    samples.foldMap(Option(_))(Monoid.minSample)
+    samples.parFoldMap(Option(_))(Monoid.minSample)
 
   // c. Implement `averageTemperature` which finds the average temperature across all `Samples`.
   // `averageTemperature` should work as follow:
@@ -21,12 +21,12 @@ object TemperatureExercises {
   // In case the input `ParList` is empty we return `None`.
   // Bonus: Can you calculate the size and sum in one go?
   def averageTemperature(samples: ParList[Sample]): Option[Double] = {
-    val (tTemp, tSize) = samples.foldMap(s => (s.temperatureFahrenheit, 1))(Monoid.sumDoubleIntTuple)
+    val (tTemp, tSize) = samples.parFoldMap(s => (s.temperatureFahrenheit, 1))(Monoid.sumDoubleIntTuple)
     Option.unless(tSize == 0)(tTemp / tSize)
   }
 
   def sumTemperature(samples: ParList[Sample]): Double =
-    samples.foldMap(_.temperatureFahrenheit)(Monoid.sumDouble)
+    samples.parFoldMap(_.temperatureFahrenheit)(Monoid.sumDouble)
 
   // d. Implement `foldLeft` and then move it inside the class `ParList`.
   // `foldLeft` should work as follow:
